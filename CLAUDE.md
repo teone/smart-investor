@@ -128,9 +128,142 @@ Build an AI-powered investment application that uses Large Language Models (LLMs
 - **Documentation**: Clear user guides and API documentation
 - **Error Handling**: Graceful error messages and recovery
 
+## Architecture
+
+### Core Components
+
+1. AI Research & Analysis Engine
+Purpose: Query LLMs to identify investment opportunities based on user-defined criteria
+Components:
+
+Criteria Parser: Converts natural language investment criteria into structured queries
+Company Research Agent: Uses LLM to research companies based on criteria
+ESG/Ethics Evaluator: Specialized module for ethical and sustainability assessments
+Research Aggregator: Combines multiple LLM responses and external data sources
+
+Key Functions:
+
+Process investment criteria (e.g., "ethical companies investing in climate science")
+Research potential companies using LLM knowledge and web search
+Evaluate companies against specified criteria
+Generate investment recommendations with reasoning
+
+2. Market Data Service
+Purpose: Provide real-time and historical financial data
+Components:
+
+Stock Price API Integration (Alpha Vantage, Yahoo Finance, IEX Cloud)
+Market News API (NewsAPI, Financial Modeling Prep)
+Company Fundamentals API (SEC EDGAR, Financial APIs)
+Data Caching Layer (Redis for frequent queries)
+
+Key Functions:
+
+Fetch current stock prices and trading volumes
+Retrieve historical price data
+Monitor market news and events
+Provide company financial metrics
+
+3. Portfolio Management Engine
+Purpose: Manage investment allocations and track performance
+Components:
+
+Portfolio State Manager: Track current holdings and cash positions
+Allocation Engine: Determine optimal investment amounts
+Rebalancing Service: Suggest portfolio adjustments
+Risk Assessment Module: Evaluate portfolio risk metrics
+
+Key Functions:
+
+Maintain current portfolio state
+Calculate position sizes and diversification
+Generate buy/sell recommendations
+Track investment performance metrics
+
+4. Decision Engine
+Purpose: Orchestrate investment decisions using AI insights and market data
+Components:
+
+Investment Strategy Processor: Apply user-defined investment rules
+Market Timing Analyzer: Assess market conditions for timing decisions
+Risk Manager: Ensure decisions align with risk tolerance
+Decision Logger: Track all decisions with reasoning
+
+Key Functions:
+
+Combine AI recommendations with market data
+Apply risk management rules
+Generate actionable investment decisions
+Maintain decision audit trail
+
+5. Backtesting & Simulation Engine
+Purpose: Test investment strategies and track hypothetical performance
+Components:
+
+Historical Data Processor: Apply decisions to historical market data
+Performance Calculator: Compute returns, volatility, and other metrics
+Benchmark Comparator: Compare against market indices
+Scenario Tester: Test portfolio under different market conditions
+
+Key Functions:
+
+Simulate portfolio performance over time
+Calculate would-be gains/losses
+Generate performance reports
+Test strategy variations
+
+6. Data Storage Layer
+Purpose: Persist application data and maintain historical records
+Database Schema:
+sql-- Core Tables
+portfolios (id, name, initial_capital, current_cash, created_at)
+holdings (portfolio_id, symbol, quantity, avg_cost, last_updated)
+transactions (portfolio_id, symbol, type, quantity, price, timestamp, reasoning)
+investment_criteria (portfolio_id, criteria_text, weight, active)
+research_reports (id, portfolio_id, symbol, ai_analysis, score, created_at)
+market_data (symbol, timestamp, price, volume, source)
+decisions (id, portfolio_id, decision_type, reasoning, confidence, executed_at)
+performance_snapshots (portfolio_id, timestamp, total_value, returns, metrics)
+7. Monitoring & Alerting Service
+Purpose: Track market conditions and trigger proactive recommendations
+Components:
+
+News Monitor: Scan financial news for relevant updates
+Price Alert System: Monitor significant price movements
+Criteria Change Detector: Identify when companies no longer meet criteria
+Performance Threshold Monitor: Alert on significant gains/losses
+
+8. API Gateway & Web Interface
+Purpose: Provide user interface and external integrations
+Features:
+
+Portfolio dashboard with real-time values
+Investment criteria configuration
+Decision approval/rejection interface
+Performance analytics and charts
+Historical decision review
+
+### Data Flow
+User Input (Criteria) 
+    ↓
+AI Research Engine 
+    ↓
+Market Data Integration 
+    ↓
+Decision Engine 
+    ↓
+Portfolio Management 
+    ↓
+Execution (Mock/Real) 
+    ↓
+Performance Tracking 
+    ↓
+User Dashboard
+
 ## Development Phases
 
 ### Phase 1: MVP (Minimum Viable Product)
+- Command line based
 - Basic portfolio tracking
 - Simple AI company research
 - Market data integration
