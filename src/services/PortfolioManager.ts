@@ -15,7 +15,7 @@ export class PortfolioManager {
 
   constructor() {
     this.marketData = new MarketDataService();
-    this.aiEngine = new AIResearchEngine();
+    this.aiEngine = new AIResearchEngine(config.defaultLLMProvider as 'openai' | 'anthropic' | 'google');
   }
 
   async initialize(): Promise<void> {

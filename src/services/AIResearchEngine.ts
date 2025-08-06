@@ -1,13 +1,21 @@
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatAnthropic } from '@langchain/anthropic';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { CompanyResearch, InvestmentCriteria, InvestmentRecommendation } from '../types';
 import { config } from '../config';
 
 export class AIResearchEngine {
-  private llm: ChatOpenAI | ChatAnthropic;
+  private llm: ChatOpenAI | ChatAnthropic | ChatGoogleGenerativeAI;
 
-  constructor(provider: 'openai' | 'anthropic' = 'openai') {
-    if (provider === 'openai' && config.openai.apiKey) {
+  constructor(provider: 'openai' | 'anthropic' | 'google' = 'google') {
+    if (provider === 'google' && config.google.apiKey) {
+      this.llm = new ChatGoogleGenerativeAI({
+        apiKey: config.google.apiKey,
+        modelName: config.google.model,
+        temperature: 0.3,
+        maxOutputTokens: 8192
+      });
+    } else if (provider === 'openai' && config.openai.apiKey) {
       this.llm = new ChatOpenAI({
         openAIApiKey: config.openai.apiKey,
         modelName: config.openai.model,

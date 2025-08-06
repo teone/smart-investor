@@ -5,7 +5,7 @@ An AI-powered investment application that uses Large Language Models (LLMs) to i
 ## Phase 1 MVP Features
 
 - **Command-line interface** for portfolio management
-- **AI-driven company research** using OpenAI/Anthropic
+- **AI-driven company research** using Google Gemini/OpenAI/Anthropic
 - **Real-time market data** via Yahoo Finance API
 - **Portfolio tracking** with performance metrics
 - **Manual buy/sell execution** with transaction history
@@ -21,7 +21,7 @@ An AI-powered investment application that uses Large Language Models (LLMs) to i
 2. **Set up environment**:
    ```bash
    cp .env.example .env
-   # Edit .env and add your OpenAI API key
+   # Edit .env and add your Google API key
    ```
 
 3. **Build the project**:
@@ -94,14 +94,15 @@ npm run dev sell <portfolioId> <symbol> <quantity>
 
 ## Configuration
 
-The application requires an OpenAI API key for AI research functionality. Yahoo Finance API is used for market data (no API key required).
+The application requires a Google Gemini API key for AI research functionality by default. Yahoo Finance API is used for market data (no API key required).
 
 Required environment variables:
-- `OPENAI_API_KEY`: Your OpenAI API key
+- `GOOGLE_API_KEY`: Your Google Gemini API key
 
 Optional environment variables:
-- `ANTHROPIC_API_KEY`: Alternative to OpenAI
-- `LLM_PROVIDER`: Choose between 'openai' or 'anthropic'
+- `OPENAI_API_KEY`: Alternative to Google Gemini
+- `ANTHROPIC_API_KEY`: Alternative to Google/OpenAI
+- `LLM_PROVIDER`: Choose between 'google', 'openai', or 'anthropic'
 - `DATA_PATH`: Custom data storage location
 
 ## Data Storage
