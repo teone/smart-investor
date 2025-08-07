@@ -2,7 +2,7 @@
 
 import { Command } from 'commander';
 import { PortfolioManager } from '../services/PortfolioManager';
-import { config, validateConfig } from '../config';
+import { validateConfig } from '../config';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { table } from 'table';

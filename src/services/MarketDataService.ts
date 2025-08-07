@@ -11,7 +11,7 @@ export class MarketDataService {
       });
 
       const data = response.data;
-      
+
       if (data.chart?.error) {
         throw new Error(`Yahoo Finance API Error: ${data.chart.error.description}`);
       }
@@ -44,17 +44,17 @@ export class MarketDataService {
 
   async getBatchPrices(symbols: string[]): Promise<Map<string, number>> {
     const prices = new Map<string, number>();
-    
+
     // Yahoo Finance allows multiple symbols in one request
     const symbolsParam = symbols.join(',');
-    
+
     try {
       const response = await axios.get(`${this.baseUrl}${symbolsParam}`, {
         timeout: 15000
       });
 
       const data = response.data;
-      
+
       if (!data.chart?.result) {
         throw new Error('No data returned from Yahoo Finance');
       }
@@ -62,26 +62,26 @@ export class MarketDataService {
       for (const result of data.chart.result) {
         const symbol = result.meta.symbol;
         const currentPrice = result.meta.regularMarketPrice || result.meta.previousClose;
-        
+
         if (currentPrice) {
           prices.set(symbol, currentPrice);
         }
       }
 
       return prices;
-    } catch (error) {
+    } catch (_) { // eslint-disable-line @typescript-eslint/no-unused-vars
       // Fallback to individual requests if batch fails
       console.warn('Batch request failed, falling back to individual requests');
-      
+
       for (const symbol of symbols) {
         try {
           const stockPrice = await this.getCurrentPrice(symbol);
           prices.set(symbol, stockPrice.price);
-          
+
           // Small delay to be respectful
           await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (error) {
-          console.warn(`Failed to fetch price for ${symbol}:`, error);
+        } catch (_error) {
+          console.warn(`Failed to fetch price for ${symbol}:`, _error);
         }
       }
 
@@ -101,7 +101,7 @@ export class MarketDataService {
       });
 
       const data = response.data;
-      
+
       if (data.chart?.error) {
         throw new Error(`Yahoo Finance API Error: ${data.chart.error.description}`);
       }
@@ -115,7 +115,7 @@ export class MarketDataService {
       const closes = result.indicators?.quote?.[0]?.close || [];
 
       const prices: StockPrice[] = [];
-      
+
       for (let i = 0; i < timestamps.length; i++) {
         if (closes[i] !== null) {
           prices.push({
@@ -140,12 +140,12 @@ export class MarketDataService {
     try {
       await this.getCurrentPrice(symbol);
       return true;
-    } catch (error) {
+    } catch (_) { // eslint-disable-line @typescript-eslint/no-unused-vars
       return false;
     }
   }
 
-  async searchSymbols(query: string): Promise<Array<{symbol: string, name: string}>> {
+  async searchSymbols(query: string): Promise<Array<{ symbol: string, name: string }>> {
     try {
       const response = await axios.get('https://query2.finance.yahoo.com/v1/finance/search', {
         params: {
@@ -176,7 +176,7 @@ export class MarketDataService {
   private getPeriodTimestamp(period: string): number {
     const now = Date.now() / 1000;
     const day = 24 * 60 * 60;
-    
+
     switch (period) {
       case '1d': return now - day;
       case '5d': return now - (5 * day);

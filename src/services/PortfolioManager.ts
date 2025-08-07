@@ -28,10 +28,10 @@ export class PortfolioManager {
   async createPortfolio(name: string, initialCapital: number): Promise<string> {
     const portfolio = new PortfolioModel(name, initialCapital);
     const portfolioId = portfolio.getId();
-    
+
     this.portfolios.set(portfolioId, portfolio);
     await this.savePortfolios();
-    
+
     return portfolioId;
   }
 
@@ -92,9 +92,9 @@ export class PortfolioManager {
       timestamp: new Date(),
       reasoning: `Manual buy order executed at market price`
     };
-    
+
     this.transactions.push(transaction);
-    
+
     await this.savePortfolios();
     await this.saveTransactions();
   }
@@ -122,9 +122,9 @@ export class PortfolioManager {
       timestamp: new Date(),
       reasoning: `Manual sell order executed at market price`
     };
-    
+
     this.transactions.push(transaction);
-    
+
     await this.savePortfolios();
     await this.saveTransactions();
   }
@@ -167,7 +167,7 @@ export class PortfolioManager {
     progressCallback?.('Finding potential companies based on your criteria...');
     // Find potential companies based on criteria
     const potentialSymbols = await this.aiEngine.findCompaniesForCriteria(criteria, 15);
-    
+
     if (potentialSymbols.length === 0) {
       progressCallback?.('No companies found matching your criteria.');
       return [];
@@ -260,12 +260,12 @@ export class PortfolioManager {
     try {
       const dataDir = config.dataPath;
       const portfolioPath = path.join(dataDir, config.portfolioFile);
-      
+
       await fs.mkdir(dataDir, { recursive: true });
-      
+
       const data = await fs.readFile(portfolioPath, 'utf-8');
       const portfoliosData: Portfolio[] = JSON.parse(data);
-      
+
       for (const portfolioData of portfoliosData) {
         const portfolio = PortfolioModel.fromData({
           ...portfolioData,
@@ -273,7 +273,7 @@ export class PortfolioManager {
         });
         this.portfolios.set(portfolio.getId(), portfolio);
       }
-    } catch (error) {
+    } catch (_) { // eslint-disable-line @typescript-eslint/no-unused-vars
       // File doesn't exist or is empty, start with empty portfolios
       console.log('No existing portfolios found, starting fresh');
     }
@@ -283,9 +283,9 @@ export class PortfolioManager {
     try {
       const dataDir = config.dataPath;
       const portfolioPath = path.join(dataDir, config.portfolioFile);
-      
+
       await fs.mkdir(dataDir, { recursive: true });
-      
+
       const portfoliosData = Array.from(this.portfolios.values()).map(p => p.toData());
       await fs.writeFile(portfolioPath, JSON.stringify(portfoliosData, null, 2));
     } catch (error) {
@@ -298,15 +298,15 @@ export class PortfolioManager {
     try {
       const dataDir = config.dataPath;
       const transactionsPath = path.join(dataDir, 'transactions.json');
-      
+
       const data = await fs.readFile(transactionsPath, 'utf-8');
       const transactionsData = JSON.parse(data);
-      
+
       this.transactions = transactionsData.map((t: any) => ({
         ...t,
         timestamp: new Date(t.timestamp)
       }));
-    } catch (error) {
+    } catch (_) { // eslint-disable-line @typescript-eslint/no-unused-vars
       // File doesn't exist or is empty, start with empty transactions
       console.log('No existing transactions found, starting fresh');
     }
@@ -316,7 +316,7 @@ export class PortfolioManager {
     try {
       const dataDir = config.dataPath;
       const transactionsPath = path.join(dataDir, 'transactions.json');
-      
+
       await fs.mkdir(dataDir, { recursive: true });
       await fs.writeFile(transactionsPath, JSON.stringify(this.transactions, null, 2));
     } catch (error) {
@@ -329,16 +329,16 @@ export class PortfolioManager {
     try {
       const dataDir = config.dataPath;
       const recommendationsPath = path.join(dataDir, 'recommendations.json');
-      
+
       const data = await fs.readFile(recommendationsPath, 'utf-8');
       const recommendationsData = JSON.parse(data);
-      
+
       this.recommendations = recommendationsData.map((r: any) => ({
         ...r,
         createdAt: new Date(r.createdAt),
         executedAt: r.executedAt ? new Date(r.executedAt) : undefined
       }));
-    } catch (error) {
+    } catch (_) { // eslint-disable-line @typescript-eslint/no-unused-vars
       // File doesn't exist or is empty, start with empty recommendations
       console.log('No existing recommendations found, starting fresh');
     }
@@ -348,7 +348,7 @@ export class PortfolioManager {
     try {
       const dataDir = config.dataPath;
       const recommendationsPath = path.join(dataDir, 'recommendations.json');
-      
+
       await fs.mkdir(dataDir, { recursive: true });
       await fs.writeFile(recommendationsPath, JSON.stringify(this.recommendations, null, 2));
     } catch (error) {

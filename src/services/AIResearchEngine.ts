@@ -56,7 +56,7 @@ Format your response as a detailed analysis that explains your reasoning.
     try {
       const response = await this.llm.invoke(prompt);
       const analysis = response.content as string;
-      
+
       // Extract score from analysis (simple regex approach)
       const scoreMatch = analysis.match(/score[:\s]*(\d+)/i);
       const score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
@@ -91,12 +91,10 @@ Format your response as a detailed analysis that explains your reasoning.
     }
 
     const recommendations: InvestmentRecommendation[] = [];
-    const cashPerPosition = availableCash / Math.min(sortedResearches.length, maxPositions);
 
     for (const research of sortedResearches) {
       const confidence = research.score / 100;
-      const recommendedInvestment = cashPerPosition * (confidence * 0.8 + 0.2);
-      
+
       // Generate concise reasoning using LLM
       const reasoning = await this.generateConciseReasoning(research);
 
@@ -131,10 +129,10 @@ Provide a brief, compelling reason why this is a good investment opportunity. Fo
     try {
       const response = await this.llm.invoke(prompt);
       const reasoning = (response.content as string).trim();
-      
+
       // Ensure it's under 500 characters
       return reasoning.length > 500 ? reasoning.substring(0, 497) + '...' : reasoning;
-    } catch (error) {
+    } catch (_) { // eslint-disable-line @typescript-eslint/no-unused-vars
       // Fallback to truncated original analysis
       const fallback = `Score: ${research.score}/100. ${research.analysis.substring(0, 400)}`;
       return fallback.length > 500 ? fallback.substring(0, 497) + '...' : fallback;
