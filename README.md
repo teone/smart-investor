@@ -130,6 +130,24 @@ npm run build
 npm start <command>
 ```
 
+## Releases
+
+This project uses automated releases via GitHub Actions:
+
+### Release Process
+1. Update version in `package.json` to a release version (no pre-release suffix)
+2. Push to main branch
+3. GitHub Actions will automatically:
+   - Build executables for Linux, macOS, and Windows
+   - Create a GitHub release with changelog
+   - Upload platform-specific binaries
+
+### Version Format
+- **Release versions**: `1.0.0`, `1.2.3`, `2.0.0`
+- **Pre-release versions**: `1.0.0-alpha.1`, `1.0.0-beta.2`, `1.0.0-rc.1`
+
+Only release versions (without pre-release suffixes) trigger automated releases.
+
 ## Disclaimer
 
 This application is for educational and research purposes only. It does not execute real trades or connect to actual brokerage accounts. All investment decisions should be made with proper research and consideration of your financial situation.
