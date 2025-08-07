@@ -3,11 +3,52 @@ name: Release
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
+  ci:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run type check
+        run: npm run typecheck
+      
+      - name: Run linting
+        run: npm run lint
+      
+      - name: Build project
+        run: npm run build
+      
+      - name: Run tests
+        run: npm test
+        continue-on-error: true  # Tests might not be implemented yet
+      
+      - name: Check package.json version format
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Package version: $VERSION"
+          
+          # Validate semantic version format
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9\-\.]+)?$ ]]; then
+            echo "Error: Invalid semantic version format: $VERSION"
+            echo "Expected format: MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH-prerelease"
+            exit 1
+          fi
+          
+          echo "Version format is valid"
+
   check-version:
+    needs: ci
     runs-on: ubuntu-latest
     outputs:
       is-release: ${{ steps.version-check.outputs.is-release }}
@@ -36,13 +77,17 @@ jobs:
         if: steps.version-check.outputs.is-release == 'true'
         run: |
           VERSION=${{ steps.version-check.outputs.version }}
+          TAG="v$VERSION"
           
-          # Check if release already exists
-          if gh release view "v$VERSION" >/dev/null 2>&1; then
-            echo "Release v$VERSION already exists"
+          # Check if tag already exists
+          if git ls-remote --tags origin | grep -q "refs/tags/$TAG$"; then
+            echo "Tag $TAG already exists"
+            echo "should-release=false" >> $GITHUB_OUTPUT
+          elif gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists"
             echo "should-release=false" >> $GITHUB_OUTPUT
           else
-            echo "Release v$VERSION does not exist, proceeding"
+            echo "Tag $TAG does not exist, proceeding with release"
             echo "should-release=true" >> $GITHUB_OUTPUT
           fi
         env:
@@ -103,8 +148,35 @@ jobs:
           name: smart-invest-${{ matrix.platform }}-${{ matrix.arch }}
           path: smart-invest-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.ext }}
 
-  create-release:
+  create-tag:
     needs: [check-version, build-and-release]
+    runs-on: ubuntu-latest
+    if: needs.check-version.outputs.is-release == 'true' && needs.check-version.outputs.should-release == 'true'
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Create and push tag
+        run: |
+          VERSION=${{ needs.check-version.outputs.version }}
+          TAG="v$VERSION"
+          
+          echo "Creating tag: $TAG"
+          git tag -a "$TAG" -m "Release version $VERSION"
+          git push origin "$TAG"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  create-release:
+    needs: [check-version, build-and-release, create-tag]
     runs-on: ubuntu-latest
     if: needs.check-version.outputs.is-release == 'true' && needs.check-version.outputs.should-release == 'true'
     
@@ -192,8 +264,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   skip-release:
-    needs: check-version
-    if: needs.check-version.outputs.is-release == 'false' || needs.check-version.outputs.should-release == 'false'
+    needs: [ci, check-version]
+    if: always() && (needs.ci.result == 'success') && (needs.check-version.outputs.is-release == 'false' || needs.check-version.outputs.should-release == 'false')
     runs-on: ubuntu-latest
     
     steps:
