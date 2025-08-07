@@ -52,6 +52,16 @@ export class PortfolioManager {
     return deleted;
   }
 
+  async addCriteria(portfolioId: string, description: string, weight: number = 1): Promise<void> {
+    const portfolio = this.portfolios.get(portfolioId);
+    if (!portfolio) {
+      throw new Error(`Portfolio not found: ${portfolioId}`);
+    }
+
+    portfolio.addCriteria(description, weight);
+    await this.savePortfolios();
+  }
+
   async buyStock(portfolioId: string, symbol: string, quantity: number): Promise<void> {
     const portfolio = this.portfolios.get(portfolioId);
     if (!portfolio) {

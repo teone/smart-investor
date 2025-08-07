@@ -201,7 +201,7 @@ program
             }
           ]);
 
-          portfolio.addCriteria(answers.description, answers.weight);
+          await portfolioManager.addCriteria(portfolioId, answers.description, answers.weight);
           
           console.log(chalk.green('✅ Criteria added successfully!'));
           console.log(chalk.gray(`Criteria: ${answers.description}`));
