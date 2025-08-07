@@ -153,7 +153,7 @@ export class PortfolioManager {
     return portfolio.calculateTotalValue(currentPrices);
   }
 
-  async generateRecommendations(portfolioId: string): Promise<InvestmentRecommendation[]> {
+  async generateRecommendations(portfolioId: string, progressCallback?: (step: string, current?: number, total?: number) => void): Promise<InvestmentRecommendation[]> {
     const portfolio = this.portfolios.get(portfolioId);
     if (!portfolio) {
       throw new Error(`Portfolio not found: ${portfolioId}`);
@@ -164,13 +164,22 @@ export class PortfolioManager {
       return [];
     }
 
+    progressCallback?.('Finding potential companies based on your criteria...');
     // Find potential companies based on criteria
     const potentialSymbols = await this.aiEngine.findCompaniesForCriteria(criteria, 15);
     
+    if (potentialSymbols.length === 0) {
+      progressCallback?.('No companies found matching your criteria.');
+      return [];
+    }
+
+    progressCallback?.('Researching companies using AI analysis...', 0, potentialSymbols.length);
     // Research each company
     const researches = [];
-    for (const symbol of potentialSymbols) {
+    for (let i = 0; i < potentialSymbols.length; i++) {
+      const symbol = potentialSymbols[i];
       try {
+        progressCallback?.(`Analyzing ${symbol}...`, i + 1, potentialSymbols.length);
         const research = await this.aiEngine.researchCompany(symbol, criteria);
         researches.push(research);
       } catch (error) {
@@ -178,6 +187,7 @@ export class PortfolioManager {
       }
     }
 
+    progressCallback?.('Generating investment recommendations...');
     // Generate recommendations
     const recommendations = await this.aiEngine.generateRecommendations(
       portfolioId,
@@ -186,6 +196,7 @@ export class PortfolioManager {
       8 // Max 8 positions for diversification
     );
 
+    progressCallback?.('Saving recommendations...');
     // Store recommendations
     this.recommendations.push(...recommendations);
     await this.saveRecommendations();

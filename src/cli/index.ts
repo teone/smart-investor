@@ -236,7 +236,31 @@ program
       console.log(chalk.blue('🤖 Generating AI recommendations...'));
       console.log(chalk.gray('This may take a moment as we research companies.\n'));
 
-      const recommendations = await portfolioManager.generateRecommendations(portfolioId);
+      const recommendations = await portfolioManager.generateRecommendations(portfolioId, (step, current, total) => {
+        if (current !== undefined && total !== undefined) {
+          // Show progress for company analysis
+          const percentage = Math.round((current / total) * 100);
+          const progressBar = '█'.repeat(Math.floor(percentage / 5)) + '░'.repeat(20 - Math.floor(percentage / 5));
+          
+          if (step.includes('Analyzing')) {
+            // Individual company analysis
+            process.stdout.write(`\r${chalk.blue('🔍')} ${step} [${progressBar}] ${percentage}% (${current}/${total})`);
+          } else {
+            // Research phase header
+            process.stdout.write(`\r${chalk.blue('📊')} ${step} [${progressBar}] ${percentage}% (${current}/${total})`);
+          }
+          
+          if (current === total) {
+            process.stdout.write('\n');
+          }
+        } else {
+          // Clear line and show general step progress
+          process.stdout.write(`\r\x1b[K${chalk.blue('🔍')} ${step}`);
+          if (!step.includes('...')) {
+            process.stdout.write('\n');
+          }
+        }
+      });
 
       if (recommendations.length === 0) {
         console.log(chalk.yellow('No recommendations found based on your criteria.'));
