@@ -51,12 +51,18 @@ export interface CompanyResearch {
 }
 
 export interface InvestmentRecommendation {
+  id: string;
+  portfolioId: string;
   symbol: string;
   action: 'BUY' | 'SELL' | 'HOLD';
   quantity?: number;
   reasoning: string;
+  score: number;
   confidence: number;
   targetPrice?: number;
+  createdAt: Date;
+  executed?: boolean;
+  executedAt?: Date;
 }
 
 export interface PerformanceMetrics {

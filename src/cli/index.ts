@@ -247,11 +247,15 @@ program
 
       for (let i = 0; i < recommendations.length; i++) {
         const rec = recommendations[i];
-        console.log(chalk.cyan(`${i + 1}. ${rec.symbol}`));
+        console.log(chalk.cyan(`${i + 1}. ${rec.symbol} (ID: ${rec.id})`));
         console.log(chalk.gray(`Action: ${rec.action}`));
+        console.log(chalk.gray(`Score: ${rec.score}/100`));
         console.log(chalk.gray(`Confidence: ${(rec.confidence * 100).toFixed(0)}%`));
         console.log(chalk.gray(`Reasoning: ${rec.reasoning}\n`));
       }
+
+      console.log(chalk.yellow('To execute a recommendation, use:'));
+      console.log(chalk.gray('smart-invest execute <recommendationId>'));
 
     } catch (error) {
       console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
@@ -306,6 +310,67 @@ program
       await portfolioManager.sellStock(portfolioId, symbol.toUpperCase(), quantity);
 
       console.log(chalk.green('✅ Sale completed successfully!'));
+
+    } catch (error) {
+      console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
+    }
+  });
+
+program
+  .command('execute')
+  .description('Execute an AI recommendation')
+  .argument('<recommendationId>', 'Recommendation ID to execute')
+  .action(async (recommendationId) => {
+    try {
+      await portfolioManager.initialize();
+
+      console.log(chalk.blue(`🤖 Executing recommendation ${recommendationId}...`));
+
+      await portfolioManager.executeRecommendation(recommendationId);
+
+      console.log(chalk.green('✅ Recommendation executed successfully!'));
+
+    } catch (error) {
+      console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
+    }
+  });
+
+program
+  .command('recommendations')
+  .description('View recommendations for a portfolio')
+  .argument('<portfolioId>', 'Portfolio ID')
+  .option('-p, --pending', 'Show only pending recommendations')
+  .action(async (portfolioId, options) => {
+    try {
+      await portfolioManager.initialize();
+
+      const recommendations = options.pending 
+        ? portfolioManager.getPendingRecommendations(portfolioId)
+        : portfolioManager.getRecommendations(portfolioId);
+
+      if (recommendations.length === 0) {
+        console.log(chalk.yellow('No recommendations found.'));
+        return;
+      }
+
+      console.log(chalk.blue(`\n📋 ${options.pending ? 'Pending ' : ''}Recommendations:\n`));
+
+      for (const rec of recommendations) {
+        const status = rec.executed 
+          ? chalk.green('✅ EXECUTED') 
+          : chalk.yellow('⏳ PENDING');
+          
+        console.log(chalk.cyan(`${rec.symbol} (${rec.id})`));
+        console.log(chalk.gray(`Status: ${status}`));
+        console.log(chalk.gray(`Action: ${rec.action}`));
+        console.log(chalk.gray(`Score: ${rec.score}/100`));
+        console.log(chalk.gray(`Confidence: ${(rec.confidence * 100).toFixed(0)}%`));
+        console.log(chalk.gray(`Created: ${rec.createdAt.toLocaleDateString()}`));
+        if (rec.executedAt) {
+          console.log(chalk.gray(`Executed: ${rec.executedAt.toLocaleDateString()}`));
+        }
+        console.log(chalk.gray(`Reasoning: ${rec.reasoning}\n`));
+      }
 
     } catch (error) {
       console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);

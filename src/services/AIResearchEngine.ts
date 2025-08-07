@@ -76,6 +76,7 @@ Format your response as a detailed analysis that explains your reasoning.
   }
 
   async generateRecommendations(
+    portfolioId: string,
     researches: CompanyResearch[],
     availableCash: number,
     maxPositions: number = 10
@@ -94,18 +95,54 @@ Format your response as a detailed analysis that explains your reasoning.
 
     for (const research of sortedResearches) {
       const confidence = research.score / 100;
-      const recommendedInvestment = cashPerPosition * (confidence * 0.8 + 0.2); // Scale by confidence
+      const recommendedInvestment = cashPerPosition * (confidence * 0.8 + 0.2);
+      
+      // Generate concise reasoning using LLM
+      const reasoning = await this.generateConciseReasoning(research);
 
       recommendations.push({
+        id: this.generateRecommendationId(),
+        portfolioId,
         symbol: research.symbol,
         action: 'BUY',
-        reasoning: `Score: ${research.score}/100. ${research.reasoning.substring(0, 200)}...`,
+        reasoning,
+        score: research.score,
         confidence,
-        targetPrice: undefined // TODO: Add price analysis
+        targetPrice: undefined, // TODO: Add price analysis
+        createdAt: new Date(),
+        executed: false
       });
     }
 
     return recommendations;
+  }
+
+  private async generateConciseReasoning(research: CompanyResearch): Promise<string> {
+    const prompt = `
+Based on this company analysis, provide a concise investment reasoning in under 500 characters:
+
+Company: ${research.symbol}
+Score: ${research.score}/100
+Full Analysis: ${research.analysis}
+
+Provide a brief, compelling reason why this is a good investment opportunity. Focus on the key strengths and alignment with criteria. Keep it under 500 characters.
+`;
+
+    try {
+      const response = await this.llm.invoke(prompt);
+      const reasoning = (response.content as string).trim();
+      
+      // Ensure it's under 500 characters
+      return reasoning.length > 500 ? reasoning.substring(0, 497) + '...' : reasoning;
+    } catch (error) {
+      // Fallback to truncated original analysis
+      const fallback = `Score: ${research.score}/100. ${research.analysis.substring(0, 400)}`;
+      return fallback.length > 500 ? fallback.substring(0, 497) + '...' : fallback;
+    }
+  }
+
+  private generateRecommendationId(): string {
+    return `rec_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   }
 
   async findCompaniesForCriteria(criteria: InvestmentCriteria[], limit: number = 20): Promise<string[]> {
