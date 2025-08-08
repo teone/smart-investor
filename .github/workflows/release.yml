@@ -87,9 +87,6 @@ jobs:
           if git ls-remote --tags origin | grep -q "refs/tags/$TAG$"; then
             echo "Tag $TAG already exists"
             echo "should-release=false" >> $GITHUB_OUTPUT
-          elif gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists"
-            echo "should-release=false" >> $GITHUB_OUTPUT
           else
             echo "Tag $TAG does not exist, proceeding with release"
             echo "should-release=true" >> $GITHUB_OUTPUT
@@ -97,63 +94,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build-and-release:
-    needs: check-version
-    if: needs.check-version.outputs.is-release == 'true' && needs.check-version.outputs.should-release == 'true'
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
-            ext: ''
-          - os: windows-latest
-            platform: win
-            arch: x64
-            ext: '.exe'
-          - os: macos-latest
-            platform: macos
-            arch: x64
-            ext: ''
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Run type check
-        run: npm run typecheck
-      
-      - name: Run linting
-        run: npm run lint
-      
-      - name: Build project
-        run: npm run build
-      
-      - name: Install pkg globally
-        run: npm install -g pkg
-      
-      - name: Create executable
-        run: |
-          pkg dist/cli/index.js --targets node18-${{ matrix.platform }}-${{ matrix.arch }} --output smart-invest-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.ext }}
-      
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: smart-invest-${{ matrix.platform }}-${{ matrix.arch }}
-          path: smart-invest-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.ext }}
-
   create-tag:
-    needs: [check-version, build-and-release]
+    needs: [check-version]
     runs-on: ubuntu-latest
     if: needs.check-version.outputs.is-release == 'true' && needs.check-version.outputs.should-release == 'true'
     
@@ -176,96 +118,8 @@ jobs:
           echo "Creating tag: $TAG"
           git tag -a "$TAG" -m "Release version $VERSION"
           git push origin "$TAG"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  create-release:
-    needs: [check-version, build-and-release, create-tag]
-    runs-on: ubuntu-latest
-    if: needs.check-version.outputs.is-release == 'true' && needs.check-version.outputs.should-release == 'true'
-    
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./artifacts
-      
-      - name: List artifacts
-        run: find ./artifacts -type f -name "smart-invest-*"
-      
-      - name: Generate changelog
-        id: changelog
-        run: |
-          VERSION=${{ needs.check-version.outputs.version }}
           
-          # Generate changelog from git commits since last release
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          
-          if [ -n "$LAST_TAG" ]; then
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" $LAST_TAG..HEAD)
-          else
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --max-count=20)
-          fi
-          
-          # Create changelog file
-          cat > CHANGELOG.md << EOF
-          # Smart Investment AI v$VERSION
-          
-          ## What's New
-          
-          $CHANGELOG
-          
-          ## Installation
-          
-          Download the appropriate binary for your platform:
-          - **Linux**: \`smart-invest-linux-x64\`
-          - **macOS**: \`smart-invest-macos-x64\`
-          - **Windows**: \`smart-invest-win-x64.exe\`
-          
-          Make the binary executable (Linux/macOS):
-          \`\`\`bash
-          chmod +x smart-invest-*
-          ./smart-invest-* --help
-          \`\`\`
-          
-          ## Requirements
-          
-          - Google Gemini API key (or OpenAI/Anthropic)
-          - Internet connection for market data
-          
-          ## Quick Start
-          
-          1. Create \`.env\` file with your API key:
-             \`\`\`
-             GOOGLE_API_KEY=your_api_key_here
-             \`\`\`
-          
-          2. Initialize your first portfolio:
-             \`\`\`
-             ./smart-invest init
-             \`\`\`
-          
-          3. Add investment criteria and get AI recommendations!
-          EOF
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ needs.check-version.outputs.version }}
-          name: Smart Investment AI v${{ needs.check-version.outputs.version }}
-          body_path: CHANGELOG.md
-          files: |
-            ./artifacts/smart-invest-linux-x64/smart-invest-linux-x64
-            ./artifacts/smart-invest-macos-x64/smart-invest-macos-x64
-            ./artifacts/smart-invest-win-x64/smart-invest-win-x64.exe
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "✅ Successfully created and pushed tag: $TAG"
 
   skip-release:
     needs: [ci, check-version]

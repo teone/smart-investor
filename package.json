@@ -14,20 +14,6 @@
   "bin": {
     "smart-invest": "./dist/cli/index.js"
   },
-  "pkg": {
-    "scripts": [
-      "dist/**/*.js"
-    ],
-    "assets": [
-      "node_modules/@langchain/**/*",
-      "node_modules/langchain/**/*"
-    ],
-    "targets": [
-      "node18-linux-x64",
-      "node18-macos-x64",
-      "node18-win-x64"
-    ]
-  },
   "keywords": [
     "ai",
     "investment",
@@ -64,7 +50,6 @@
     "globals": "^16.3.0",
     "jest": "^29.7.0",
     "jiti": "^2.5.1",
-    "pkg": "^5.8.1",
     "ts-jest": "^29.1.1",
     "tsx": "^4.6.2",
     "typescript": "^5.3.3",

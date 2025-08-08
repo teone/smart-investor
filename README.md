@@ -138,9 +138,8 @@ This project uses automated releases via GitHub Actions:
 1. Update version in `package.json` to a release version (no pre-release suffix)
 2. Push to main branch
 3. GitHub Actions will automatically:
-   - Build executables for Linux, macOS, and Windows
-   - Create a GitHub release with changelog
-   - Upload platform-specific binaries
+   - Run CI checks (lint, typecheck, build, test)
+   - Create and push a Git tag (e.g., `v1.0.0`)
 
 ### Version Format
 - **Release versions**: `1.0.0`, `1.2.3`, `2.0.0`
