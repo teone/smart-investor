@@ -1,6 +1,6 @@
 {
   "name": "smart-investment-ai",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "AI-powered investment application using LLMs for portfolio management",
   "main": "dist/cli.js",
   "scripts": {
