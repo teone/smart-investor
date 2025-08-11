@@ -3,9 +3,11 @@ import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { CompanyResearch, InvestmentCriteria, InvestmentRecommendation } from '../types';
 import { config } from '../config';
+import { MCPMarketDataClient } from '../utils/MCPClient';
 
 export class AIResearchEngine {
   private llm: ChatOpenAI | ChatAnthropic | ChatGoogleGenerativeAI;
+  private mcpClient: MCPMarketDataClient;
 
   constructor(provider: 'openai' | 'anthropic' | 'google' = 'google') {
     if (provider === 'google' && config.google.apiKey) {
@@ -30,6 +32,9 @@ export class AIResearchEngine {
     } else {
       throw new Error(`Invalid LLM provider or missing API key: ${provider}`);
     }
+
+    // Initialize MCP client
+    this.mcpClient = new MCPMarketDataClient();
   }
 
   async researchCompany(symbol: string, criteria: InvestmentCriteria[]): Promise<CompanyResearch> {
@@ -38,32 +43,91 @@ export class AIResearchEngine {
       .map(c => `- ${c.description} (weight: ${c.weight})`)
       .join('\n');
 
-    const prompt = `
+    // Get market data for context
+    let marketContext = '';
+    try {
+      if (!this.mcpClient.isConnected()) {
+        await this.mcpClient.connect();
+      }
+      
+      const marketData = await this.mcpClient.getMarketData(symbol);
+      
+      if (Object.keys(marketData).length > 0) {
+        marketContext = `\nCurrent Market Data for ${symbol}:`;
+        
+        if (marketData.currentPrice) {
+          marketContext += `\n- Current Price: $${marketData.currentPrice.toFixed(2)}`;
+        }
+        
+        if (marketData.priceRange) {
+          marketContext += `\n- 52-Week Range: $${marketData.priceRange.min} - $${marketData.priceRange.max}`;
+          marketContext += `\n- Position in Range: ${marketData.priceRange.rangePercent.toFixed(1)}%`;
+        }
+        
+        if (marketData.volatility) {
+          marketContext += `\n- Volatility (1Y): ${marketData.volatility.toFixed(1)}%`;
+        }
+        
+        if (marketData.returns) {
+          marketContext += `\n- 1-Year Return: ${marketData.returns.totalReturn.toFixed(1)}%`;
+        }
+        
+        if (marketData.priceHistory && marketData.priceHistory.length > 0) {
+          const recent = marketData.priceHistory.slice(-30);
+          const trend = this.calculateTrend(recent);
+          marketContext += `\n- Recent Trend: ${trend}`;
+        }
+      }
+    } catch (error) {
+      console.warn(`Could not fetch market data for ${symbol}:`, error);
+    }
+
+    const enhancedPrompt = `
 Analyze the company with stock symbol "${symbol}" based on the following investment criteria:
 
 ${criteriaText}
+${marketContext}
 
-Please provide:
+Please provide a comprehensive analysis considering BOTH:
+1. Fundamental alignment with the investment criteria
+2. Current market valuation and timing considerations
+
+Your analysis should include:
 1. Company name and brief description
 2. How well the company aligns with each criterion
-3. Overall analysis of the company's investment potential
-4. A numerical score from 0-100 based on criteria alignment
-5. Key reasons supporting your recommendation
+3. Market valuation assessment (is the current price attractive?)
+4. Risk analysis based on volatility and market position
+5. Overall investment potential combining fundamentals and market timing
+6. A numerical score from 0-100 considering both criteria alignment AND current market attractiveness
+7. Key reasons supporting your recommendation
 
 Format your response as a detailed analysis that explains your reasoning.
 `;
 
     try {
-      const response = await this.llm.invoke(prompt);
+      const response = await this.llm.invoke(enhancedPrompt);
       const analysis = response.content as string;
 
-      // Extract score from analysis (simple regex approach)
-      const scoreMatch = analysis.match(/score[:\s]*(\d+)/i);
-      const score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
+      // Extract score from analysis (improved regex approach)
+      const scoreMatches = analysis.match(/score[:\s]*(\d+)/gi);
+      let score = 50;
+      
+      if (scoreMatches && scoreMatches.length > 0) {
+        const lastMatch = scoreMatches[scoreMatches.length - 1];
+        const scoreValue = lastMatch.match(/(\d+)/);
+        if (scoreValue) {
+          score = parseInt(scoreValue[1]);
+        }
+      }
+
+      // Extract company name from analysis
+      const nameMatch = analysis.match(/company name[:\s]*([^\n]+)/i) || 
+                       analysis.match(/^([^.]+)(?:\sis|\soperates|\sengage)/im);
+      const companyName = nameMatch ? nameMatch[1].trim().replace(/['"]/g, '') : symbol;
 
       return {
         symbol,
-        companyName: symbol, // TODO: Extract company name from analysis
+        companyName,
         analysis,
         score: Math.min(100, Math.max(0, score)),
         reasoning: analysis,
@@ -141,6 +205,20 @@ Provide a brief, compelling reason why this is a good investment opportunity. Fo
 
   private generateRecommendationId(): string {
     return `rec_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  }
+
+  private calculateTrend(prices: Array<{ price: number; timestamp: string }>): string {
+    if (prices.length < 2) return 'Insufficient data';
+    
+    const first = prices[0].price;
+    const last = prices[prices.length - 1].price;
+    const change = ((last - first) / first) * 100;
+    
+    if (change > 5) return 'Strong Uptrend';
+    if (change > 2) return 'Uptrend';
+    if (change > -2) return 'Sideways';
+    if (change > -5) return 'Downtrend';
+    return 'Strong Downtrend';
   }
 
   async findCompaniesForCriteria(criteria: InvestmentCriteria[], limit: number = 20): Promise<string[]> {
