@@ -24,6 +24,13 @@ export const config = {
     baseUrl: 'https://query1.finance.yahoo.com/v8/finance/chart/'
   },
 
+  // MCP Server Configuration
+  mcpServer: {
+    host: process.env.MCP_SERVER_HOST || 'localhost',
+    port: parseInt(process.env.MCP_SERVER_PORT || '3001'),
+    enabled: process.env.MCP_SERVER_ENABLED !== 'false'
+  },
+
   // Data Storage
   dataPath: process.env.DATA_PATH || './data',
   portfolioFile: 'portfolios.json',

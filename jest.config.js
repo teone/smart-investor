@@ -20,4 +20,27 @@ module.exports = {
     'lcov',
     'html'
   ],
+  projects: [
+    {
+      displayName: 'unit',
+      preset: 'ts-jest',
+      testEnvironment: 'node',
+      roots: ['<rootDir>/src', '<rootDir>/tests'],
+      testMatch: ['<rootDir>/tests/**/*.test.ts', '!<rootDir>/tests/e2e/**/*.test.ts'],
+      transform: {
+        '^.+\\.ts$': 'ts-jest',
+      },
+    },
+    {
+      displayName: 'e2e',
+      preset: 'ts-jest', 
+      testEnvironment: 'node',
+      roots: ['<rootDir>/src', '<rootDir>/tests'],
+      testMatch: ['<rootDir>/tests/e2e/**/*.test.ts'],
+      transform: {
+        '^.+\\.ts$': 'ts-jest',
+      },
+      testTimeout: 30000,
+    }
+  ]
 };

@@ -266,7 +266,7 @@ User Dashboard
 - Command line based
 - Basic portfolio tracking
 - Simple AI company research
-- Market data integration
+- Market data integration via MCP server
 - Manual buy/sell execution
 - Basic performance reporting
 
@@ -308,3 +308,253 @@ User Dashboard
 - Consider fiduciary responsibilities if managing others' money
 - Implement proper data privacy and security measures
 - Provide clear terms of service and risk disclosures
+
+# MCP Market Data Server Specification
+
+## Overview
+The Market Data MCP Server provides LLMs with direct access to real-time and historical financial market data through standardized MCP tools. This enables dynamic, context-aware financial analysis during AI reasoning processes.
+
+## MCP Server Architecture
+
+### Server Configuration
+- **Name**: `smart-investment-market-data`
+- **Version**: `1.0.0`
+- **Protocol**: MCP (Model Context Protocol)
+- **Transport**: stdio/tcp
+- **Language**: TypeScript/Node.js
+
+### Core MCP Tools
+
+#### 1. get_current_price
+**Purpose**: Fetch real-time stock price and basic market data
+```typescript
+{
+  name: "get_current_price",
+  description: "Get current stock price and basic market information",
+  inputSchema: {
+    type: "object",
+    properties: {
+      symbol: { type: "string", description: "Stock symbol (e.g., AAPL, MSFT)" }
+    },
+    required: ["symbol"]
+  }
+}
+```
+**Returns**: `{ symbol: string, price: number, timestamp: Date, source: string, marketCap?: number }`
+
+#### 2. get_historical_prices
+**Purpose**: Retrieve historical price data for technical analysis
+```typescript
+{
+  name: "get_historical_prices", 
+  description: "Get historical price data for a stock over specified period",
+  inputSchema: {
+    type: "object",
+    properties: {
+      symbol: { type: "string", description: "Stock symbol" },
+      period: { 
+        type: "string", 
+        enum: ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "max"],
+        description: "Time period for historical data"
+      },
+      interval: {
+        type: "string",
+        enum: ["1m", "5m", "15m", "1h", "1d"],
+        description: "Data interval granularity"
+      }
+    },
+    required: ["symbol", "period"]
+  }
+}
+```
+**Returns**: `Array<{ symbol: string, price: number, timestamp: Date, volume?: number }>`
+
+#### 3. get_batch_prices
+**Purpose**: Efficiently fetch multiple stock prices in one request
+```typescript
+{
+  name: "get_batch_prices",
+  description: "Get current prices for multiple stocks simultaneously",
+  inputSchema: {
+    type: "object", 
+    properties: {
+      symbols: { 
+        type: "array",
+        items: { type: "string" },
+        description: "Array of stock symbols"
+      }
+    },
+    required: ["symbols"]
+  }
+}
+```
+**Returns**: `Map<string, { price: number, timestamp: Date }>`
+
+#### 4. search_symbols
+**Purpose**: Find stock symbols by company name or criteria
+```typescript
+{
+  name: "search_symbols",
+  description: "Search for stock symbols by company name or keywords",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "Search query (company name or keywords)" },
+      limit: { type: "number", description: "Maximum number of results", default: 10 }
+    },
+    required: ["query"]
+  }
+}
+```
+**Returns**: `Array<{ symbol: string, name: string, exchange?: string }>`
+
+#### 5. calculate_metrics
+**Purpose**: Compute financial and technical indicators
+```typescript
+{
+  name: "calculate_metrics",
+  description: "Calculate financial metrics and technical indicators",
+  inputSchema: {
+    type: "object",
+    properties: {
+      symbol: { type: "string", description: "Stock symbol" },
+      metrics: {
+        type: "array",
+        items: {
+          enum: ["volatility", "returns", "moving_average", "rsi", "beta"]
+        },
+        description: "Metrics to calculate"
+      },
+      period: { type: "string", description: "Analysis period", default: "1y" }
+    },
+    required: ["symbol", "metrics"]
+  }
+}
+```
+**Returns**: `{ [metric: string]: number | object }`
+
+#### 6. validate_symbol
+**Purpose**: Check if a stock symbol is valid and tradeable
+```typescript
+{
+  name: "validate_symbol",
+  description: "Validate if a stock symbol exists and is tradeable",
+  inputSchema: {
+    type: "object",
+    properties: {
+      symbol: { type: "string", description: "Stock symbol to validate" }
+    },
+    required: ["symbol"]
+  }
+}
+```
+**Returns**: `{ valid: boolean, symbol: string, name?: string, exchange?: string }`
+
+#### 7. get_market_status
+**Purpose**: Check current market trading status
+```typescript
+{
+  name: "get_market_status",
+  description: "Get current market trading status and hours",
+  inputSchema: {
+    type: "object",
+    properties: {
+      market: { 
+        type: "string", 
+        enum: ["NYSE", "NASDAQ", "all"],
+        description: "Specific market or all markets",
+        default: "all"
+      }
+    }
+  }
+}
+```
+**Returns**: `{ isOpen: boolean, nextOpen?: Date, nextClose?: Date, timezone: string }`
+
+#### 8. get_price_alerts
+**Purpose**: Monitor price thresholds and movements
+```typescript
+{
+  name: "get_price_alerts",
+  description: "Check if stock price meets specified alert conditions",
+  inputSchema: {
+    type: "object",
+    properties: {
+      symbol: { type: "string", description: "Stock symbol" },
+      conditions: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            type: { enum: ["above", "below", "change_percent"] },
+            value: { type: "number" },
+            timeframe: { type: "string", default: "1d" }
+          }
+        }
+      }
+    },
+    required: ["symbol", "conditions"]
+  }
+}
+```
+**Returns**: `{ alerts: Array<{ condition: object, triggered: boolean, currentValue: number }> }`
+
+## Implementation Details
+
+### Error Handling
+- Rate limiting with exponential backoff
+- Graceful degradation when APIs are unavailable
+- Comprehensive error logging
+
+### Security
+- Request validation and sanitization  
+- Rate limiting per client connection
+- Audit logging for all requests
+
+### Data Provider
+- **Primary**: Yahoo Finance (free tier)
+
+## Integration with AI Research Engine
+
+### Enhanced LLM Prompts
+The AI Research Engine will be updated to instruct LLMs to use market data tools:
+
+```typescript
+const enhancedPrompt = `
+Analyze the company with stock symbol "${symbol}" based on these investment criteria:
+${criteriaText}
+
+IMPORTANT: Use the available market data tools to gather current financial context:
+1. Call get_current_price("${symbol}") to get current valuation
+2. Call get_historical_prices("${symbol}", "1y") for price trends  
+3. Call calculate_metrics("${symbol}", ["volatility", "returns"]) for risk analysis
+4. Use get_market_status() to understand timing context
+
+Provide analysis considering both fundamental criteria alignment AND current market valuation.
+`;
+```
+
+### Dynamic Market Context
+LLMs can now:
+- Fetch real-time prices during analysis
+- Calculate risk metrics on-demand
+- Consider market timing in recommendations
+- Validate stock symbols before analysis
+- Access historical performance data
+
+## Updated Development Phases
+
+### Phase 1: MVP Enhancement
+- **MCP Server Implementation**: Build market data MCP server with core tools
+- **AI Integration**: Update AIResearchEngine to use MCP tools
+- **Dynamic Analysis**: Enable LLMs to fetch market data during reasoning
+- **Testing**: Comprehensive testing of MCP integration
+
+### Phase 1.5: Market-Aware AI Analysis
+- **Valuation Integration**: Combine fundamental analysis with current pricing
+- **Risk Assessment**: Use market data for portfolio risk calculations  
+- **Market Timing**: Consider market conditions in recommendations
+- **Enhanced Metrics**: Advanced financial calculations via MCP tools
+- **Performance Validation**: Backtest market-integrated recommendations
+
+This MCP server approach transforms your AI investment application from static analysis to dynamic, market-aware intelligent decision making.

@@ -7,12 +7,22 @@
     "build": "tsc",
     "dev": "tsx src/cli/index.ts",
     "start": "node dist/cli/index.js",
+    "mcp-server": "tsx src/mcp/market-data-server.ts",
+    "mcp-server:prod": "npm run build && node dist/mcp/market-data-server.js",
+    "mcp-server:http": "tsx src/mcp/http-market-data-server.ts",
+    "mcp-server:http:prod": "npm run build && node dist/mcp/http-market-data-server.js",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "test:unit": "jest --selectProjects unit",
+    "test:e2e": "jest --selectProjects e2e",
+    "test:watch": "jest --watch --selectProjects unit",
+    "test:mcp": "npm run build && jest --selectProjects e2e tests/e2e/mcp-server.test.ts",
+    "test:integration": "npm run build && jest --selectProjects e2e tests/e2e/http-mcp-integration.test.ts"
   },
   "bin": {
-    "smart-invest": "./dist/cli/index.js"
+    "smart-invest": "./dist/cli/index.js",
+    "smart-invest-market-data": "./dist/mcp/market-data-server.js"
   },
   "keywords": [
     "ai",
@@ -28,10 +38,12 @@
     "@langchain/anthropic": "^0.0.4",
     "@langchain/google-genai": "^0.0.11",
     "@langchain/openai": "^0.0.14",
+    "@modelcontextprotocol/sdk": "^1.17.2",
     "axios": "^1.6.2",
     "chalk": "4.1.2",
     "commander": "^11.1.0",
     "dotenv": "^16.3.1",
+    "express": "^5.1.0",
     "inquirer": "8.2.6",
     "langchain": "^0.0.208",
     "table": "^6.8.1",
@@ -40,6 +52,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@types/express": "^5.0.3",
     "@types/inquirer": "^8.2.10",
     "@types/jest": "^29.5.8",
     "@types/node": "^20.10.4",
